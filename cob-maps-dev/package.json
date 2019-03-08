@@ -1,0 +1,16 @@
+{
+  "name": "cob-snowmap",
+  "version": "1.0.0",
+  "description": "Boston Snowmap",
+  "author": "City of Boston Digital Team <digital@boston.gov>",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.13.3"
+  },
+  "engines": {
+    "node": "~8.7",
+    "npm": "^5.0.0"
+  }
+}
