@@ -1,0 +1,125 @@
+
+<!-- sunny.svg & other.svg credit to https://www.flaticon.com/authors/iconixar -->
+<!-- snowy.svg & rainy.svg credit to https://www.flaticon.com/authors/freepik -->
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+  <head>
+    <title>Scatter Plot - Weather & Crimes -</title>
+    <script src="http://d3js.org/d3.v5.min.js"></script>
+    <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+    <script src="build/d3-ez.js"></script>
+    <link rel="stylesheet" type="text/css" href="build/d3-ez.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+    <style>
+    div{display:inline}
+    </style>
+  </head>
+  <body>
+    <div id='scatterPlotChart'></div>
+    <script type = "text/javascript">
+
+    var margin = {top:50, right:100, bottom: 100, left: 100},
+        total_width = 1500,
+        total_height = 900, 
+        width = total_width - margin.left - margin.right,
+        height = total_height - margin.top - margin.bottom,
+        legend_size = {width: 50, height: 20},
+        years,
+        months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+        colors = colorbrewer.RdYlBu[9].reverse();
+
+    d3.csv("data.csv", function(d) {
+        return {
+            id: d.INCIDENT_NUMBER,
+            date: d.Date_new, 
+            max_temp: +d.Max_Temp, 
+            min_temp: +d.Min_Temp,
+            ave_temp: +d.Ave_Temp,
+            weather: d.Weather
+        };
+        }).then(function(data) {
+            var data_date = d3.nest()
+                                    .key(function(d) { return d.date; })
+                                    .key(function(d){ return d.weather; })
+                                    .rollup(function(v){ return v.length; })
+                                    .entries(data);
+            
+            // console.log(d3.extent(data_date.map(function(d){ return d.values[0].value})))
+            // console.log(data_date.map(function(d){ return d.key; }).sort())
+            return data_date
+        }).then(function(data){
+            console.log(data)
+            // console.log(new Date(2018,1,1))
+            var svg = d3.select("#scatterPlotChart").append("svg")
+                .attr("width", total_width)
+                .attr("height", total_height)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            var x_scale = d3.scaleTime()
+                            // .domain(d3.extent(data.map(function(d){ return d.key; }))
+                            //             .map(function(v){ return new Date(v); }))
+                            .domain([new Date(2015, 5, 1), new Date(2018, 11, 1)])
+                            .range([margin.left, total_width - margin.right]);
+            
+            var y_scale = d3.scaleLinear()
+                            // .domain(d3.extent(data.map(function(d){ return d.values[0].value; })))
+                            .domain([120, 360])
+                            .range([total_height - margin.bottom, margin.top]);
+            
+            // Draw x axis
+            var x_axis = d3.axisBottom(x_scale);
+            
+            svg.append("g")
+                .call(x_axis)
+                .attr("transform", "translate(0 ," + (total_height - margin.bottom) +")");
+
+            svg.append("text")             
+                .attr("x", total_width / 2)
+                .attr("y", total_height - 50)
+                .style("text-anchor", "middle")
+                .text("Date");
+
+            // Draw y axis
+            var y_axis = d3.axisLeft(y_scale);
+            
+            svg.append("g")
+                .call(y_axis)
+                .attr("transform", "translate(" + margin.left + " ,0)");
+
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x", - total_height / 2)
+                .attr("y", margin.left / 2 - 20)
+                .style("text-anchor", "middle")
+                .text("Crimes Count");      
+
+            const img_dict = {
+                Sunny: "sunny.svg",
+                Rainy: "rainy.svg",
+                Snowy: "snowy.svg",
+                Other: "other.svg"
+            }
+
+            var points = svg.append("g")
+                            .selectAll("img")
+                            .data(data)
+                            .enter()
+                            .append("svg:image")
+                            .attr("xlink:href", function(d){
+                                return img_dict[d.values[0].key]
+                            })
+                            .attr("x", function(d){ return x_scale(new Date(d.key)); })
+                            .attr("y", function(d){ return y_scale(d.values[0].value); })
+                            .attr("width", 20)
+                            .attr("height", 20)
+                            
+
+            
+
+
+
+        })
+    </script>

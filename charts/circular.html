@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+  <head>
+    <title>Circular Heat Chart</title>
+    <script src="http://d3js.org/d3.v5.min.js"></script>
+    <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+    <!-- <script src="circularHeatChart.js"></script> -->
+    <script src="build/d3-ez.js"></script>
+    <link rel="stylesheet" type="text/css" href="build/d3-ez.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+    <style>
+    div{display:inline}
+    </style>
+  </head>
+  <body>
+    <div id='circularHeatChart'></div>
+    <script type = "text/javascript">
+
+    d3.csv("data.csv", function(d) {
+        return {
+            id: d.INCIDENT_NUMBER,
+            weekday: d.DAY_OF_WEEK,
+            hour: +d.HOUR,
+        };
+        }).then(function(data) {
+            // console.log(data[0])
+            var weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+            var data_weekday_hour = d3.nest()
+                                    .key(function(d) { return d.weekday; })
+                                    .key(function(d) { return d.hour; })
+                                    .rollup(function(v) { return v.length; })
+                                    .entries(data)
+                                    .sort(function(a, b){ return weekdays.indexOf(a.key) - weekdays.indexOf(b.key) });
+            var data_expand = new Array();
+            
+            for (var i = 0; i < 7; i++){
+                data_weekday_hour[i].values.sort(function(a, b){ return a.key - b.key})
+                for (var j = 0; j < 24; j++){
+                    // console.log(data_weekday_hour[i].values)
+                    data_expand.push(data_weekday_hour[i].values[j].value)
+                }
+            }
+
+            // console.log(data_expand)
+            return {
+                data: data_weekday_hour,
+                data_expand: data_expand
+            }
+        }).then(function(data) {
+
+            var colors_m = colorbrewer.YlOrRd[6];
+            var color_scale_m = d3.scaleQuantile()
+            .domain(d3.extent(data['data_expand']))
+            .range(colors_m);
+
+            // var colors = ["#D34152", "#f4bc71", "#FBF6C4", "#9bcf95", "#398abb"];
+            var chart = d3.ez.chart.heatMapRadial().colors(colors_m).colorScale(color_scale_m);
+            // var legend = d3.ez.component.legend().title('Crimes Counts');
+            // var title = d3.ez.component.title().mainText("").subText("");
+
+            // Create chart base
+            var myChart = d3.ez()
+            .width(1000)
+            .height(800)
+            .chart(chart)
+            // .legend(legend)
+            // .title(title)
+            .on("customValueMouseOver", function(d, i) {
+                d3.select("#message").text(d.key);
+            });
+
+            d3.select('#circularHeatChart')
+            .datum(data['data'])
+            .call(myChart);
+
+        });
+        
+    </script>
+
+  </body>

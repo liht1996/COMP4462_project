@@ -1,0 +1,169 @@
+
+<!-- sunny.svg & other.svg credit to https://www.flaticon.com/authors/iconixar -->
+<!-- snowy.svg & rainy.svg credit to https://www.flaticon.com/authors/freepik -->
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+  <head>
+    <title>Scatter Plot - Weather & Crimes -</title>
+    <script src="http://d3js.org/d3.v5.min.js"></script>
+    <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
+    <script src="build/d3-ez.js"></script>
+    <link rel="stylesheet" type="text/css" href="build/d3-ez.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+    <style>
+    div{display:inline}
+    </style>
+  </head>
+  <body>
+    <div id='scatterPlotChart'></div>
+    <script type = "text/javascript">
+
+    var margin = {top:50, right:100, bottom: 100, left: 100},
+        total_width = 1500,
+        total_height = 900, 
+        width = total_width - margin.left - margin.right,
+        height = total_height - margin.top - margin.bottom,
+        legend_size = {width: 50, height: 20};
+
+    d3.csv("data.csv", function(d) {
+        return {
+            id: d.INCIDENT_NUMBER,
+            date: d.Date_new, 
+            max_temp: +d.Max_Temp, 
+            min_temp: +d.Min_Temp,
+            ave_temp: +d.Ave_Temp,
+            weather: d.Weather
+        };
+    }).then(function(data) {
+        var data_date = d3.nest()
+                        .key(function(d){ return d.date; })
+                        .rollup(function(v){ 
+                            return {
+                                count: v.length,
+                                ave_temp: v[0].ave_temp,
+                                weather: v[0].weather 
+                            }; 
+                        })
+                        .entries(data);
+        
+        // Calculate # of counts under temp and weather
+        var ave_data = d3.nest()
+                        .key(function(d){ return d.weather; })
+                        .key(function(d){ return d.ave_temp; })
+                        .rollup(function(v){ 
+                            var array = new Array();
+                            var count = 0
+                            v.forEach(function(d){
+                                if (array.indexOf(d.date) == -1){
+                                    array.push(d.date);
+                                    count++;
+                                }
+                            });
+                            return {count_crime: v.length,
+                                    count_day: count,
+                                    ave_crime: v.length / count
+                            };
+                        })
+                        .entries(data);
+        
+        // console.log(data_1)
+        // console.log(ave_data)
+        return [data_date, ave_data];
+    }).then(function(data){
+        // console.log(data)
+        // var data = in_data[0]
+        // var ave_data = in_data[1]
+
+        var svg = d3.select("#scatterPlotChart").append("svg")
+            .attr("width", total_width)
+            .attr("height", total_height)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var x_scale = d3.scaleLinear()
+                        // .domain(d3.extent(data.map(function(d){ return d.key; }))
+                        //             .map(function(v){ return new Date(v); }))
+                        .domain([0, 100])
+                        .range([margin.left, total_width - margin.right - 10]);
+        
+        var y_scale = d3.scaleLinear()
+                        // .domain(d3.extent(data.map(function(d){ return d.values[0].value; })))
+                        .domain([120, 360])
+                        .range([total_height - margin.bottom, margin.top]);
+        
+        // Draw x axis
+        var x_axis = d3.axisBottom(x_scale);
+        
+        svg.append("g")
+            .call(x_axis)
+            .attr("transform", "translate(0 ," + (total_height - margin.bottom) +")");
+
+        svg.append("text")             
+            .attr("x", total_width / 2)
+            .attr("y", total_height - 60)
+            .style("text-anchor", "middle")
+            .text("Temperature (°F) ");
+
+        // Draw y axis
+        var y_axis = d3.axisLeft(y_scale);
+        
+        svg.append("g")
+            .call(y_axis)
+            .attr("transform", "translate(" + margin.left + " ,0)");
+
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("x", - total_height / 2)
+            .attr("y", margin.left / 2)
+            .style("text-anchor", "middle")
+            .text("Crimes Count");      
+
+        const img_dict = {
+            Sunny: "sunny.svg",
+            Rainy: "rainy.svg",
+            Snowy: "snowy.svg",
+            Other: "other.svg"
+        };
+
+        // var points = svg.append("g")
+        //                 .selectAll("img")
+        //                 .data(data[0])
+        //                 .enter()
+        //                 .append("svg:image")
+        //                 .attr("xlink:href", function(d){ return img_dict[d.value['weather']]; })
+        //                 .attr("x", function(d){ return x_scale(d.value['ave_temp']); })
+        //                 .attr("y", function(d){ return y_scale(d.value['count']); })
+        //                 .attr("width", 20)
+        //                 .attr("height", 20);
+
+        var line_generator = d3.line()
+                    .x(function(d){ return x_scale(parseInt(d.key)); })
+                    .y(function(d){ return y_scale(d.value['ave_crime']); });
+
+                    
+
+        var lines_ = svg.append("g")
+                       .selectAll("path");
+
+        const color_dict = {
+            Sunny: d3.rgb(253, 201, 30),
+            Rainy: d3.rgb(139, 220, 217),
+            Snowy: d3.rgb(0, 130, 170),
+            Other: d3.rgb(153, 206, 246)
+        };
+
+        for (var i = 0; i < 4; i++){
+            lines_.data([data[1][i].values.sort(function(a, b){ return a.key - b.key})])
+                       .enter()
+                       .append("path")
+                       .attr('d', function(d){ console.log(d); return line_generator(d); })
+                       .attr('stroke', color_dict[data[1][i].key])
+                       .attr('stroke-width', 5)
+                       .attr('fill', 'none')
+                       .attr('z-index', 10);
+        }
+        
+    })
+    </script>
