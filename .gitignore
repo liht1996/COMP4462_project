@@ -1,6 +1,3 @@
 *.csv
 
-/cob-maps-dev
-/d3-circularheat-master
-/d3-ez-master
-/boston-parcels-gh-pages
+old/
