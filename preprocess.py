@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import re
+from nltk.corpus import stopwords
 
 
 
@@ -44,8 +46,34 @@ def group(offense):
         
     return np.nan
 
+def clean_tokenize(string):
+    """
+        Tokenization/string cleaning for datasets.
+        :param string: a doc with multiple sentences, type: str
+        return a word list, type: list
+        e.g.
+        Input: 'It is a nice day. I am happy.'
+        ['it', 'is', 'a', 'nice', 'day', 'i', 'am', 'happy']
+        """
+#     string = re.sub(r"[^A-Za-z0-9(),!?\'\`]", " ", string) # remove non alphabet, non digit, non punctuation
+    string = re.sub(r"[^A-Za-z]", " ", string)
+    string = re.sub(r"\'s", " \'s", string) # add a space before \'s
+    string = re.sub(r"\'ve", " \'ve", string)
+    string = re.sub(r"n\'t", " n\'t", string)
+    string = re.sub(r"\'re", " \'re", string)
+    string = re.sub(r"\'d", " \'d", string)
+    string = re.sub(r"\'ll", " \'ll", string)
+    string = re.sub(r",", " , ", string)
+    string = re.sub(r"!", " ! ", string)
+    string = re.sub(r"\(", " \( ", string)
+    string = re.sub(r"\)", " \) ", string)
+    string = re.sub(r"\?", " \? ", string)
+    string = re.sub(r"\s{2,}", " ", string) #remove multiple spaces
+    word_list = string.strip().lower().split() #strip "\n", convert to lower case, split string
+    return  [word for word in word_list if word not in stopwords.words('english')] #remove stopwords
 def load_clean_group():
     df_clean = clean(load())
     df_clean['OFFENSE_GROUP'] = df_clean['OFFENSE_CODE_GROUP'].apply(group)
+    df_clean['OFFENSE_DESCRIPTION_WORDS'] = df_clean['OFFENSE_DESCRIPTION'].apply(clean_tokenize)
     print("Group successfully")
     return df_clean
