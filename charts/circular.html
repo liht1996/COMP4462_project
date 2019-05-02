@@ -30,6 +30,7 @@
             cursor: move;
             /*margin:-0.5px;*/
         }
+        
 
     </style>
     <!-- <style>
@@ -89,7 +90,7 @@
             var color_scale_m = d3.scaleQuantile()
             .domain(d3.extent(data['data_expand']))
             .range(colors_m);
-
+            
             // var colors = ["#D34152", "#f4bc71", "#FBF6C4", "#9bcf95", "#398abb"];
             var chart = d3.ez.chart.heatMapRadial().colors(colors_m).colorScale(color_scale_m);
             var legend = d3.ez.component.legend().title('Crimes Counts');
@@ -112,7 +113,7 @@
 
             var slider = createD3RangeSlider(0, 1206, "#slider-container");
             slider.range(0, 1206);
-
+            
             slider.onChange(function(newRange){
                 d3.select("#range-label").text(moment("2015-06-15").add(dayrange.min, "days").format('YYYY-MM-DD') + " - " + moment("2015-06-15").add(dayrange.max, "days").format('YYYY-MM-DD'));
                 dayrange.min = newRange.begin;

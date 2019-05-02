@@ -10,31 +10,61 @@
     <script src="http://d3js.org/d3.v5.min.js"></script>
     <script src="http://d3js.org/colorbrewer.v1.min.js"></script>
     <script src="build/d3-ez.js"></script>
+    <script src="build/d3RangeSlider.js"></script>
+    <script src="build/underscore-min.js"></script>
+    <script src="build/moment.min.js"></script>
+    <link rel="stylesheet" href="build/d3-ez.css" type="text/css"  />
+    <link href="build/d3RangeSlider.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="build/d3-ez.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
-    <style>
+    <!-- <style>
     div{display:inline}
+    </style> -->
+    <style type="text/css">
+        #slider-container{
+            position: absolute;
+            height:30px;
+            background-color: #eeeef5;
+            width: 1500px;
+        }
+        #slider {
+            position: absolute;
+            border: 1px solid #AAB;
+            background: #BCE;
+            height: 100%;
+            width: 790px;
+            top: 0px;
+            cursor: move;
+            /*margin:-0.5px;*/
+        }
+        
+
     </style>
   </head>
   <body>
     <div id='scatterPlotChart'></div>
+    <div id="range-label">2015-06-15 - 2018-10-03</div>
+    <div id="slider-container"></div>
     <script type = "text/javascript">
 
-    var margin = {top:50, right:100, bottom: 100, left: 100},
+    var margin = {top:50, right:10, bottom: 100, left: 30},
         total_width = 1500,
-        total_height = 900, 
+        total_height = 700, 
         width = total_width - margin.left - margin.right,
         height = total_height - margin.top - margin.bottom,
         legend_size = {width: 50, height: 20};
-        
-    d3.csv("data.csv", function(d) {
+    
+    var dayrange = {min: 0, max: 1206};
+
+    d3.csv("new_data.csv", function(d) {
         return {
             id: d.INCIDENT_NUMBER,
             date: d.Date_new, 
             max_temp: +d.Max_Temp, 
             min_temp: +d.Min_Temp,
             ave_temp: +d.Ave_Temp,
-            weather: d.Weather
+            weather: d.Weather,
+            days: +d.days
         };
     }).then(function(data) {
         var data_date = d3.nest()
@@ -43,7 +73,8 @@
                             return {
                                 count: v.length,
                                 ave_temp: v[0].ave_temp,
-                                weather: v[0].weather 
+                                weather: v[0].weather,
+                                days: v[0].days 
                             }; 
                         })
                         .entries(data);
@@ -72,7 +103,7 @@
         // console.log(ave_data)
         return [data_date, ave_data];
     }).then(function(data){
-        // console.log(data)
+        console.log(data)
         // var data = in_data[0]
         // var ave_data = in_data[1]
 
@@ -95,6 +126,14 @@
         
         // Draw x axis
         var x_axis = d3.axisBottom(x_scale);
+
+        var tooltip = d3.select("#scatterPlotChart")
+                .append("div")
+                .style("position", "absolute")
+                .style("z-index", "10")
+                .style("visibility", "hidden")
+                .style("background", "white")
+                .text("a simple tooltip");
         
         svg.append("g")
             .call(x_axis)
@@ -116,7 +155,7 @@
         svg.append("text")
             .attr("transform", "rotate(-90)")
             .attr("x", - total_height / 2)
-            .attr("y", margin.left / 2)
+            .attr("y", 0)
             .style("text-anchor", "middle")
             .text("Crimes Count");      
 
@@ -136,23 +175,28 @@
                         .attr("x", function(d){ return x_scale(d.value['ave_temp']); })
                         .attr("y", function(d){ return y_scale(d.value['count']); })
                         .attr("width", 20)
-                        .attr("height", 20);
+                        .attr("height", 20)
+                        .on("mouseover", function(d){ tooltip.text("Date: " + d.key+ " , Temp: " + d.value['ave_temp'] + " , Crimes: " + d.value['count']); 
+                                              return tooltip.style("visibility", "visible");})
+                        .on("mousemove", function(){ return tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px"); })
+                        .on("mouseout", function(){ return tooltip.style("visibility", "hidden"); });
+                        
 
-        var line_generator = d3.line()
-                    .x(function(d){ return x_scale(parseInt(d.key)); })
-                    .y(function(d){ return y_scale(d.value['ave_crime']); });
+        // var line_generator = d3.line()
+        //             .x(function(d){ return x_scale(parseInt(d.key)); })
+        //             .y(function(d){ return y_scale(d.value['ave_crime']); });
 
                     
 
-        var lines_ = svg.append("g")
-                       .selectAll("path");
+        // var lines_ = svg.append("g")
+        //                .selectAll("path");
 
-        const color_dict = {
-            Sunny: d3.rgb(253, 201, 30),
-            Rainy: d3.rgb(139, 220, 217),
-            Snowy: d3.rgb(0, 130, 170),
-            Other: d3.rgb(153, 206, 246)
-        };
+        // const color_dict = {
+        //     Sunny: d3.rgb(253, 201, 30),
+        //     Rainy: d3.rgb(139, 220, 217),
+        //     Snowy: d3.rgb(0, 130, 170),
+        //     Other: d3.rgb(153, 206, 246)
+        // };
 
         // for (var i = 0; i < 4; i++){
         //     lines_.data([data[1][i].values.sort(function(a, b){ return a.key - b.key})])
@@ -164,6 +208,44 @@
         //                .attr('fill', 'none')
         //                .attr('z-index', 10);
         // }
+
+        var slider = createD3RangeSlider(0, 1206, "#slider-container");
+        slider.range(0, 1206);
+            
+        slider.onChange(function(newRange){
+            d3.select("#range-label").text(moment("2015-06-15").add(dayrange.min, "days").format('YYYY-MM-DD') + " - " + moment("2015-06-15").add(dayrange.max, "days").format('YYYY-MM-DD'));
+            dayrange.min = newRange.begin;
+            dayrange.max = newRange.end;
+            points = update(data, svg, img_dict, x_scale, y_scale, points, tooltip);
+        });
         
     })
+    function update(data, svg, img_dict, x_scale, y_scale, points, tooltip){
+        // console.log("a")
+        points.remove();
+
+        return svg.append("g")
+            .selectAll("img")
+            .data(data[0])
+            .enter()
+            .append("svg:image")
+            .filter(function(d){
+                // console.log(d)
+                if (d.value.days <= dayrange.max && d.value.days >= dayrange.min){
+                    return d;
+                }
+            })
+            .attr("xlink:href", function(d){ return img_dict[d.value['weather']]; })
+            .attr("x", function(d){ return x_scale(d.value['ave_temp']); })
+            .attr("y", function(d){ return y_scale(d.value['count']); })
+            .attr("width", 20)
+            .attr("height", 20)
+            .on("mouseover", function(d){ tooltip.text("Date: " + d.key+ " , Temp: " + d.value['ave_temp'] + " , Crimes: " + d.value['count']); 
+                                              return tooltip.style("visibility", "visible");})
+                        .on("mousemove", function(){ return tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px"); })
+                        .on("mouseout", function(){ return tooltip.style("visibility", "hidden"); });
+    
+
+    }
+
     </script>
